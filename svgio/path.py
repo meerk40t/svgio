@@ -1,6 +1,6 @@
-
 from .constants import *
 from .basic import *
+
 try:
     from math import tau
 except ImportError:
@@ -329,6 +329,7 @@ class PathLexicalParser:
 ########################
 #  SVG Path Segments
 ########################
+
 
 class PathSegment:
     """
@@ -1996,67 +1997,51 @@ class Path(MutableSequence):
     def __getitem__(self, index):
         return self._segments[index]
 
-    def _validate_subpath(self, index):
-        """ensure the subpath containing this index is valid."""
-        if index < 0 or index + 1 >= len(self._segments):
-            return  # This connection doesn't exist.
-        for j in range(index, len(self._segments)):
-            close_search = self._segments[j]
-            if isinstance(close_search, Move):
-                return  # Not a closed path, subpath is valid.
-            if isinstance(close_search, Close):
-                for k in range(index, -1, -1):
-                    move_search = self._segments[k]
-                    if isinstance(move_search, Move):
-                        self._segments[j].end = Point(move_search.end)
-                        return
-                self._segments[j].end = Point(self._segments[0].end)
-                return
+    #
+    # def __eq__(self, other):
+    #     if not isinstance(other, Path):
+    #         return NotImplemented
+    #     if self.fill != other.fill or self.stroke != other.stroke:
+    #         return False
+    #     first = self
+    #     if not isinstance(first, Path):
+    #         first = Path(first)
+    #     second = other
+    #     if not isinstance(second, Path):
+    #         second = Path(second)
+    #     return first == second
+    #
+    # def __ne__(self, other):
+    #     if not isinstance(other, Path):
+    #         return NotImplemented
+    #     return not self == other
 
-    def _validate_move(self, index):
-        """ensure the next closed point from this index points to a valid location."""
-        for i in range(index + 1, len(self._segments)):
-            segment = self._segments[i]
-            if isinstance(segment, Move):
-                return  # Not a closed path, the move is valid.
-            if isinstance(segment, Close):
-                segment.end = Point(self._segments[index].end)
-                return
+    # def __iadd__(self, other):
+    #     if isinstance(other, Path):
+    #         return Path(self) + Path(other)
+    #     return NotImplemented
+    #
+    # __add__ = __iadd__
 
-    def _validate_close(self, index):
-        """ensure the close element at this position correctly links to the previous move"""
-        for i in range(index, -1, -1):
-            segment = self._segments[i]
-            if isinstance(segment, Move):
-                self._segments[index].end = Point(segment.end)
-                return
-        self._segments[index].end = (
-            Point(self._segments[0].end) if self._segments[0].end is not None else None
-        )
-        # If move is never found, just the end point of the first element. Unless that's not a thing.
+    def __matmul__(self, other):
+        m = copy(self)
+        m.__imatmul__(other)
+        return m
 
-    def _validate_connection(self, index, prefer_second=False):
+    def __rmatmul__(self, other):
+        m = copy(other)
+        m.__imatmul__(self)
+        return m
+
+    def __imatmul__(self, other):
         """
-        Validates the connection at the index.
-        Connection 0 is the connection between getitem(0) and getitem(1)
-
-        prefer_second is for those cases where failing the connection requires replacing
-        a existing value. It will prefer the authority of right side, second value.
+        The % operation with a matrix works much like multiplication except that it automatically reifies the shape.
         """
-        if index < 0 or index + 1 >= len(self._segments):
-            return  # This connection doesn't exist.
-        first = self._segments[index]
-        second = self._segments[index + 1]
-        if first.end is not None and second.start is None:
-            second.start = Point(first.end)
-        elif first.end is None and second.start is not None:
-            first.end = Point(second.start)
-        elif first.end != second.start:
-            # The two values exist but are not equal. One must replace the other.
-            if prefer_second:
-                first.end = Point(second.start)
-            else:
-                second.start = Point(first.end)
+        if isinstance(other, str):
+            other = Matrix(other)
+        if isinstance(other, Matrix):
+            self.transform *= other
+        return self
 
     def __setitem__(self, index, new_element):
         if isinstance(new_element, str):
@@ -2129,13 +2114,7 @@ class Path(MutableSequence):
         return self.d()
 
     def __repr__(self):
-        values = []
-        if len(self) > 0:
-            values.append(", ".join(repr(x) for x in self._segments))
-        self._repr_shape(values)
-        params = ", ".join(values)
-        name = self._name()
-        return "%s(%s)" % (name, params)
+        return "%s(%s)" % (self.__class__.__name__, self.d())
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -2144,19 +2123,185 @@ class Path(MutableSequence):
             return NotImplemented
         if len(self) != len(other):
             return False
-        p = abs(self)
-        q = abs(other)
+        p = self
+        q = other
         for s, o in zip(q._segments, p._segments):
             if not s == o:
                 return False
-        if p.stroke_width != q.stroke_width:
-            return False
         return True
 
     def __ne__(self, other):
         if not isinstance(other, (Path, str)):
             return NotImplemented
         return not self == other
+
+    def _calc_lengths(self, error=ERROR, min_depth=MIN_DEPTH, segments=None):
+        """
+        Calculate the length values for the segments of the Shape.
+
+        :param error: error permitted for length calculations.
+        :param min_depth: minimum depth for the length calculation.
+        :param segments: optional segments to use.
+        :return:
+        """
+        if segments is None:
+            segments = self.segments(False)
+        if self._length is not None:
+            return
+        lengths = [each.length(error=error, min_depth=min_depth) for each in segments]
+        self._length = sum(lengths)
+        if self._length == 0:
+            self._lengths = lengths
+        else:
+            self._lengths = [each / self._length for each in lengths]
+
+    def npoint(self, positions, error=ERROR):
+        """
+        Find a points between 0 and 1 within the shape. Numpy acceleration allows points to be an array of floats.
+        """
+        try:
+            import numpy as np
+        except ImportError:
+            return [self.point(pos) for pos in positions]
+
+        segments = self.segments(False)
+        if len(segments) == 0:
+            return None
+        # Shortcuts
+        if self._length is None:
+            self._calc_lengths(error=error, segments=segments)
+        xy = np.empty((len(positions), 2), dtype=float)
+        if self._length == 0:
+            i = int(round(positions * (len(segments) - 1)))
+            point = segments[i].point(0.0)
+            xy[:] = point
+            return xy
+
+        # Find which segment the point we search for is located on:
+        segment_start = 0
+        for index, segment in enumerate(segments):
+            segment_end = segment_start + self._lengths[index]
+            position_subset = (segment_start <= positions) & (positions < segment_end)
+            v0 = positions[position_subset]
+            if not len(v0):
+                continue  # Nothing matched.
+            d = segment_end - segment_start
+            if d == 0:  # This segment is 0 length.
+                segment_pos = 0.0
+            else:
+                segment_pos = (v0 - segment_start) / d
+            c = segment.npoint(segment_pos)
+            xy[position_subset] = c[:]
+            segment_start = segment_end
+
+        # the loop above will miss position == 1
+        xy[positions == 1] = np.array(list(segments[-1].end))
+        return xy
+
+    def point(self, position, error=ERROR):
+        """
+        Find a point between 0 and 1 within the Shape, going through the shape with regard to position.
+
+        :param position: value between 0 and 1 within the shape.
+        :param error: Length error permitted.
+        :return: Point at the given location.
+        """
+        segments = self.segments(False)
+        if len(segments) == 0:
+            return None
+        # Shortcuts
+        try:
+            if position <= 0.0:
+                return segments[0].point(position)
+            if position >= 1.0:
+                return segments[-1].point(position)
+        except ValueError:
+            return self.npoint([position], error=error)[0]
+
+        if self._length is None:
+            self._calc_lengths(error=error, segments=segments)
+
+        if self._length == 0:
+            i = int(round(position * (len(segments) - 1)))
+            return segments[i].point(0.0)
+        # Find which segment the point we search for is located on:
+        segment_start = 0
+        segment_pos = 0
+        segment = segments[0]
+        for index, segment in enumerate(segments):
+            segment_end = segment_start + self._lengths[index]
+            if segment_end >= position:
+                # This is the segment! How far in on the segment is the point?
+                segment_pos = (position - segment_start) / (segment_end - segment_start)
+                break
+            segment_start = segment_end
+        return segment.point(segment_pos)
+
+    def length(self, error=ERROR, min_depth=MIN_DEPTH):
+        self._calc_lengths(error, min_depth)
+        return self._length
+
+    def _validate_subpath(self, index):
+        """ensure the subpath containing this index is valid."""
+        if index < 0 or index + 1 >= len(self._segments):
+            return  # This connection doesn't exist.
+        for j in range(index, len(self._segments)):
+            close_search = self._segments[j]
+            if isinstance(close_search, Move):
+                return  # Not a closed path, subpath is valid.
+            if isinstance(close_search, Close):
+                for k in range(index, -1, -1):
+                    move_search = self._segments[k]
+                    if isinstance(move_search, Move):
+                        self._segments[j].end = Point(move_search.end)
+                        return
+                self._segments[j].end = Point(self._segments[0].end)
+                return
+
+    def _validate_move(self, index):
+        """ensure the next closed point from this index points to a valid location."""
+        for i in range(index + 1, len(self._segments)):
+            segment = self._segments[i]
+            if isinstance(segment, Move):
+                return  # Not a closed path, the move is valid.
+            if isinstance(segment, Close):
+                segment.end = Point(self._segments[index].end)
+                return
+
+    def _validate_close(self, index):
+        """ensure the close element at this position correctly links to the previous move"""
+        for i in range(index, -1, -1):
+            segment = self._segments[i]
+            if isinstance(segment, Move):
+                self._segments[index].end = Point(segment.end)
+                return
+        self._segments[index].end = (
+            Point(self._segments[0].end) if self._segments[0].end is not None else None
+        )
+        # If move is never found, just the end point of the first element. Unless that's not a thing.
+
+    def _validate_connection(self, index, prefer_second=False):
+        """
+        Validates the connection at the index.
+        Connection 0 is the connection between getitem(0) and getitem(1)
+
+        prefer_second is for those cases where failing the connection requires replacing
+        a existing value. It will prefer the authority of right side, second value.
+        """
+        if index < 0 or index + 1 >= len(self._segments):
+            return  # This connection doesn't exist.
+        first = self._segments[index]
+        second = self._segments[index + 1]
+        if first.end is not None and second.start is None:
+            second.start = Point(first.end)
+        elif first.end is None and second.start is not None:
+            first.end = Point(second.start)
+        elif first.end != second.start:
+            # The two values exist but are not equal. One must replace the other.
+            if prefer_second:
+                first.end = Point(second.start)
+            else:
+                second.start = Point(first.end)
 
     def parse(self, pathdef):
         """Parses the SVG path."""
@@ -2644,6 +2789,7 @@ class Path(MutableSequence):
 #  Path Subpath Object
 ########################
 
+
 class Subpath:
     """
     Subpath is a Path-backed window implementation. It does not store a list of segments but rather
@@ -2853,4 +2999,3 @@ class Subpath:
             if last.end != self[0].end:
                 last.end = Point(self[0].end)
         return self
-

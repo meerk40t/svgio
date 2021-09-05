@@ -154,13 +154,13 @@ class TestElementsRepr(unittest.TestCase):
         self.assertFalse(obj != obj2)
 
     def test_repr_simpleline(self):
-        obj = SimpleLine(start=(0,0), end=(100,100))
+        obj = Line(start=(0,0), end=(100,100))
         repr_obj = repr(obj)
         obj2 = eval(repr_obj)
         self.assertTrue(obj == obj2)
         self.assertFalse(obj != obj2)
 
-        obj = SimpleLine(start=(0, 0), end=(100, 100), transform="scale(2)", stroke="red", fill="blue")
+        obj = Line(start=(0, 0), end=(100, 100), transform="scale(2)", stroke="red", fill="blue")
         repr_obj = repr(obj)
         obj2 = eval(repr_obj)
         self.assertTrue(obj == obj2)
