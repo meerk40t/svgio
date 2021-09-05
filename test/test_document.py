@@ -34,7 +34,8 @@ class TestDocument(unittest.TestCase):
                 </svg>''')
         m = Document(q)
         group = m.get_element_by_id("group1")
-        group.line(0, 0, 1, 1)
+        line = group.line(0, 0, 1, 1)
+        print(line)
         print(m)
 
     def test_document_css_class(self):

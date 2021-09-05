@@ -45,6 +45,7 @@ class Node(list):
         self.document = None
         self.parent = None
         self.attributes = dict()
+        self.attributes.update(kwargs)
 
     def __str__(self):
         return self.xml()
@@ -76,7 +77,7 @@ class Node(list):
             context = SubElement(context, self.tag())
         for k in self.attributes:
             v = self.attributes[k]
-            context.set(k, v)
+            context.set(str(k), str(v))
         for c in self:
             c.xml(context)
         return tostring(context, encoding="unicode")
@@ -321,9 +322,6 @@ class Element(Node):
     If additional args exist these will be passed to property_by_args
     """
 
-    def __init__(self, *args, **kwargs):
-        Node.__init__(self, *args, **kwargs)
-
     @property
     def id(self):
         return self.attributes.get(SVG_ATTR_ID)
@@ -396,7 +394,6 @@ class ElementBuilder:
         node.document = self.document
         node.parent = self.parent
         self.parent.append(node)
-        return
 
 
 class Document(Node):
@@ -687,6 +684,18 @@ class Rect(Shape):
     Rect(dict): dictionary values read from svg.
     """
 
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs[SVG_ATTR_X] = args[0]
+            kwargs[SVG_ATTR_Y] = args[1]
+            kwargs[SVG_ATTR_WIDTH] = args[2]
+            kwargs[SVG_ATTR_HEIGHT] = args[3]
+            kwargs[SVG_ATTR_RADIUS_X] = args[4]
+            kwargs[SVG_ATTR_RADIUS_Y] = args[5]
+        except IndexError:
+            pass
+        super().__init__(*args, **kwargs)
+
     @property
     def position(self):
         values = Document.get_values(self)
@@ -697,22 +706,22 @@ class Rect(Shape):
     @property
     def x(self):
         values = Document.get_values(self)
-        return values.get(SVG_ATTR_X)
+        return values.get(SVG_ATTR_X, 0)
 
     @property
     def y(self):
         values = Document.get_values(self)
-        return values.get(SVG_ATTR_Y)
+        return values.get(SVG_ATTR_Y, 0)
 
     @property
     def width(self):
         values = Document.get_values(self)
-        return values.get(SVG_ATTR_WIDTH)
+        return values.get(SVG_ATTR_WIDTH, 1)
 
     @property
     def height(self):
         values = Document.get_values(self)
-        return values.get(SVG_ATTR_HEIGHT)
+        return values.get(SVG_ATTR_HEIGHT, 1)
 
     @property
     def rx(self):
@@ -981,6 +990,15 @@ class Ellipse(_RoundShape):
     These have geometric properties cx, cy, rx, ry
     """
 
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs[SVG_ATTR_CENTER_X] = args[0]
+            kwargs[SVG_ATTR_CENTER_Y] = args[1]
+            kwargs[SVG_ATTR_RADIUS_X] = args[2]
+            kwargs[SVG_ATTR_RADIUS_Y] = args[3]
+        except IndexError:
+            pass
+        super().__init__(*args, **kwargs)
     @property
     def rx(self):
         values = Document.get_values(self)
@@ -1061,6 +1079,15 @@ class Circle(_RoundShape):
     These have geometric properties cx, cy, r
     """
 
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs[SVG_ATTR_X] = args[0]
+            kwargs[SVG_ATTR_Y] = args[1]
+            kwargs[SVG_ATTR_RADIUS] = args[2]
+        except IndexError:
+            pass
+        super().__init__(*args, **kwargs)
+
     @property
     def r(self):
         values = Document.get_values(self)
@@ -1140,6 +1167,16 @@ class Line(Shape):
 
     These are called Line in SVG but that name is already used for Line(PathSegment)
     """
+
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs[SVG_ATTR_X1] = args[0]
+            kwargs[SVG_ATTR_Y1] = args[1]
+            kwargs[SVG_ATTR_X2] = args[2]
+            kwargs[SVG_ATTR_Y2] = args[3]
+        except IndexError:
+            pass
+        super().__init__(*args, **kwargs)
 
     @property
     def x1(self):
@@ -1261,6 +1298,13 @@ class Polyline(_Polyshape):
     These have geometric properties points
     """
 
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs[SVG_ATTR_POINTS] = args[0]
+        except IndexError:
+            pass
+        super().__init__(*args, **kwargs)
+
     def _name(self):
         return self.__class__.__name__
 
@@ -1273,11 +1317,25 @@ class Polygon(_Polyshape):
     These have geometric properties points
     """
 
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs[SVG_ATTR_POINTS] = args[0]
+        except IndexError:
+            pass
+        super().__init__(*args, **kwargs)
     def _name(self):
         return self.__class__.__name__
 
 
 class Path(Shape):
+
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs[SVG_ATTR_DATA] = args[0]
+        except IndexError:
+            pass
+        super().__init__(*args, **kwargs)
+
     @property
     def d(self):
         values = Document.get_values(self)
@@ -1303,6 +1361,10 @@ class Group(Element, ContainerElement, StructuralElement, Transformable):
     SVG 2.0 <g> are defined in:
     5.2. Grouping: the g element
     """
+
+
+    def tag(self):
+        return "g"
 
     def _name(self):
         return self.__class__.__name__
@@ -1792,6 +1854,9 @@ class SVG(Group, ContainerElement, StructuralElement):
 
     def _name(self):
         return self.__class__.__name__
+
+    def tag(self):
+        return "svg"
 
 
 class Defs(ContainerElement, StructuralElement, Element):
