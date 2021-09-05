@@ -8,8 +8,32 @@ The key difference in this project is the use of DOM Tree as a primary structure
 
 Due to the need to perform high fidelity rendering we include many standard and interacting elements from the SVG and CSS specs: Path, Matrix, Angle, Length, Color, Point and other SVG and CSS Elements. The SVG spec defines a variety of elements which generally interoperate.
 
-# Progress
-Currently nothing is done.
+# Reading
+
+`svgio` reads SVG files and parses them into their relevant nodes:
+```python
+        q = io.StringIO(u'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+                <g stroke="blue" id="group1">
+                <circle id="circle1" cx="40" cy="40" r="35"/>
+                </g>
+                </svg>''')
+        m = Document(q)
+        group = m.get_element_by_id("group1")
+        group.line(0, 0, 1, 1)
+        print(m[0])
+```
+
+gives us:
+
+```xml
+<svg viewBox="0 0 80 80"><g id="group1" stroke="blue"><circle cx="40" cy="40" id="circle1" r="35" /><line x1="0" x2="1" y1="0" y2="1" /></g></svg>
+```
+The steps done by that small line of code:
+* Parse a string based svg file
+* Find an element by its ID
+* Add in line() object
+* Print the modified code.
+
 
 # License
 
