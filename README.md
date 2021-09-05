@@ -8,7 +8,14 @@ This project uses a DOM Tree as a primary structure for loading of the SVG file.
 
 Many practical uses for svg are to convey geometric information. However, due to the complexity of the SVG spec there are a number of edge cases that low level parsing attempts cannot overcome. The goal of `svgio` is to merge the high fidelity parsing of projects like `svgelements` with the svg writing and generating abilities of `svgwrite`, and `cairo`. But, also allow the generation of rendered geometry like with `svg.path` or `svgpathtools`.  
 
-This isn't intended to be a jack-of-all-trades but a correct implementation of how SVG is supposed to work rather than a single minor aspect.
+This isn't intended to be a jack-of-all-trades but a correct implementation of how SVG is supposed to work rather than a single minor aspect, to do this the project needs to be much more browser-like.
+
+See How Browser's Work: http://taligarsiel.com/Projects/howbrowserswork1.htm by Tali Garsiel.
+
+`svgio` seeks to implement a similar main flow to modern browsers except that rather than painting and display the render tree will be a generator of geometric Path data.
+
+![webkitflow](https://user-images.githubusercontent.com/3302478/132128583-9f0b1cf9-b1e0-4e4d-aeb3-c53cca19580b.png)
+
 
 
 # Status
@@ -44,15 +51,15 @@ The steps done by that small section of code:
 
 # Editing
 
-`svgio` permits you to edit the DOM with similar API to javascript and what is defined in the SVG spec. This includes looking up nodes by their ID.
+`svgio` permits you to edit the DOM with similar API to javascript and what is defined in the SVG spec. This includes looking up nodes by their ID, appending pre-parsed XML to the node, and manipulating the node classes directly.
 
 # Saving
 
-`svgio` permits you to save svg files edited svg files. The files can be sent to disk as well as printed as a string.
+`svgio` permits you to save svg files edited svg files. The files can be sent to disk as well as printed as a string. While some svg projects can save files they often require creating rather than loading the file initially.
 
 # Creating
 
-`svgio` allows you to create SVG files from scratch and to save them to disk. For `svgwrite` like workflows.
+`svgio` allows you to create SVG files from scratch and to save them to disk. This is something `svgwrite` and `cairo` can do.
 
 # Rendering
 
@@ -72,9 +79,14 @@ The Angle, Length, and Point classes are generally also able to be used for othe
 
 The Nodes module provides the needed classes for the DOM tree, bootstrapping of nodes, modifications, and saving of nodes. This works somewhat like `svgwrite` if `svgwrite` also had the ability to read and modify the DOM nodes.
 
+Be advised: There is a `nodes.Path` class which corresponds to the non-rendered Path-node. And there is also the `path.Path()` object which corresponds to the geometric data. 
+
 # Path
 
-The Path module is similar to `svg.path` and `svgpathtools` projects and is actually derived from those projects.
+The Path module is similar to `svg.path` and `svgpathtools` projects and is derived in part from those projects.
+
+# CSS
+Proper execution of Cascading Style Sheets as a larger set of rules require DOM nodes and parsing of the style sheets to adjust the rule-matched data before the rendering process. The matching of these rules should be dynamic, altering a node can result in a CSS rule match that previously did not exist. 
 
 # License
 
@@ -108,5 +120,5 @@ The goal of this project is to provide SVG input, output, and generation capabil
 
 # Acknowledgments
 
-The Path element of this project is based in part on the `regebro/svg.path` ( https://github.com/regebro/svg.path ) project. It is also may be based, in part, on some elements of `mathandy/svgpathtools` ( https://github.com/mathandy/svgpathtools ).
+The Path element of this project is based in part on the `regebro/svg.path` ( https://github.com/regebro/svg.path ) project. It is also may be based, in part, on some elements of `mathandy/svgpathtools` ( https://github.com/mathandy/svgpathtools ). The `mozman/svgwrite` ( https://github.com/mozman/svgwrite ) is quite nice and should be thanked even if I only borrow the API for interoperability.
 

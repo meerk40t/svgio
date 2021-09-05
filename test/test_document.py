@@ -34,9 +34,8 @@ class TestDocument(unittest.TestCase):
                 </svg>''')
         m = Document(q)
         group = m.get_element_by_id("group1")
-        line = group.line(0, 0, 1, 1)
-        print(line)
-        print(m)
+        group.line(0, 0, 1, 1)
+        print(m[0])
 
     def test_document_css_class(self):
         q = io.StringIO(u'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
