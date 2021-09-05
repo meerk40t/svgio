@@ -1,14 +1,22 @@
 # svgio
 
-`svgio` reads, writes, modifies, builds, and performs geometric rendering on SVG files. 
+`svgio` reads, writes, creates, updates, and performs geometric rendering of SVG files.
 
-`svgio` does high fidelity SVG parsing into bootstrapped DOM-like nodes to facilitate reading, writing and editing of SVG files while also providing high fidelity geometric rendering from that structure.
+The goal of the project it to provide comparable access to SVG files to Javascript executed in a browser. 
 
-The key difference in this project is the use of DOM Tree as a primary structure and geometric rendering as a process that is done to the DOM Tree structure. The loading process is done with node bootstrapping to allow `Rect` tags to become `Rect` nodes within the tree. This works the way javascript's access to the DOM works, as a consequence this allow operations that would be permitted on a `Rect` object as well as rendering the objects into geometric shapes, and this allows direct modifications of the DOM Tree itself to reflect on the geometric data when rendered. This means that we can build the DOM Tree itself and thus save the loaded document.
+This project uses a DOM Tree as a primary structure for loading of the SVG file. If the node loaded is a node within the SVG-Namespace the node is replaced with the namespace node, and provides the same functionality as a locally instanced object.
 
-Due to the need to perform high fidelity rendering we include many standard and interacting elements from the SVG and CSS specs: Path, Matrix, Angle, Length, Color, Point and other SVG and CSS Elements. The SVG spec defines a variety of elements which generally interoperate.
+Many practical uses for svg are to convey geometric information. However, due to the complexity of the SVG spec there are a number of edge cases that low level parsing attempts cannot overcome. The goal of `svgio` is to merge the high fidelity parsing of projects like `svgelements` with the svg writing and generating abilities of `svgwrite`, and `cairo`. But, also allow the generation of rendered geometry like with `svg.path` or `svgpathtools`.  
+
+This isn't intended to be a jack-of-all-trades but a correct implementation of how SVG is supposed to work rather than a single minor aspect.
+
+
+# Status
+This is a work in progress. It currently does some loading and bootstrapping and parsing. It currently writes the data out. Most of the needed components exist and work, such as Path. There's still some questions concerning the API. And the rendering from the functionality from the `svgelements` project isn't correctly implemented yet. And there's a lot of bugs, and generally many places that have nothing hooked up.
 
 # Reading
+
+The loading process is done with node bootstrapping to allow `Rect` tags to become `Rect` nodes within the tree. This works the way javascript's access to the DOM works, as a consequence this allows operations that should be permitted on a `Rect` object as well as rendering the objects into geometric shapes, and this allows direct modifications of the DOM Tree itself to reflected in the geometric data when rendered. This means that loading and building the DOM Tree are equivalent operations, and the SVG and XML as a whole, can be losslessly loaded and saved.
 
 `svgio` reads SVG files and parses them into their relevant nodes:
 ```python
@@ -23,17 +31,50 @@ Due to the need to perform high fidelity rendering we include many standard and 
         print(m[0])
 ```
 
-gives us:
+Prints:
 
 ```xml
 <svg viewBox="0 0 80 80"><g id="group1" stroke="blue"><circle cx="40" cy="40" id="circle1" r="35" /><line x1="0" x2="1" y1="0" y2="1" /></g></svg>
 ```
-The steps done by that small line of code:
+The steps done by that small section of code:
 * Parse a string based svg file
 * Find an element by its ID
 * Add in line() object
 * Print the modified code.
 
+# Editing
+
+`svgio` permits you to edit the DOM with similar API to javascript and what is defined in the SVG spec. This includes looking up nodes by their ID.
+
+# Saving
+
+`svgio` permits you to save svg files edited svg files. The files can be sent to disk as well as printed as a string.
+
+# Creating
+
+`svgio` allows you to create SVG files from scratch and to save them to disk. For `svgwrite` like workflows.
+
+# Rendering
+
+`svgio` permits you to render the geometry of the DOM tree. This breaks down the particular tree nodes according to the svg/css rules, and gives you a series of relevant Path values. The rendered path values are the result of the current state of the DOM tree. So if you alter the transformation on a group, all items in the group will be altered within the final rendering. Rendering works much as it does in a Browser or other rendering engine. But rather than filled shapes produce correct Path commands from the current state of the Document Tree. 
+
+# Basic
+
+Due to the need to perform high fidelity rendering we include many standard and interacting elements from the SVG and CSS specs: Path, Matrix, Angle, Length, Color, Point and other SVG and CSS Elements. The SVG spec defines a variety of elements which generally interoperate.
+
+The basic classes provide Matrix, Angle, Length, Color, Point and other SVG and CSS Elements. These classes can be used as part of the project and are used commonly throughout the project. However, they can also be used independently to perform CSS/SVG operations.
+
+For example, the Color() class includes not only full CSS color parsing but also several useful utility functions and conversions for Color objects.
+
+The Angle, Length, and Point classes are generally also able to be used for other projects.
+
+# Nodes
+
+The Nodes module provides the needed classes for the DOM tree, bootstrapping of nodes, modifications, and saving of nodes. This works somewhat like `svgwrite` if `svgwrite` also had the ability to read and modify the DOM nodes.
+
+# Path
+
+The Path module is similar to `svg.path` and `svgpathtools` projects and is actually derived from those projects.
 
 # License
 
