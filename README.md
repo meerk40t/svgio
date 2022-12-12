@@ -1,3 +1,6 @@
+# Status
+This is a *work in progress*. It currently does some loading and bootstrapping and parsing. It currently writes the data out. Most of the needed components exist and work, such as Path. There's still some questions concerning the API. And the rendering from the functionality from the `svgelements` project isn't correctly implemented yet. And there's a lot of bugs, and generally many places that have nothing hooked up. The API would be expected to change drastically.
+
 # svgio
 
 `svgio` reads, writes, creates, updates, and performs geometric rendering of SVG files.
@@ -17,9 +20,6 @@ See How Browser's Work: http://taligarsiel.com/Projects/howbrowserswork1.htm by 
 ![webkitflow](https://user-images.githubusercontent.com/3302478/132128583-9f0b1cf9-b1e0-4e4d-aeb3-c53cca19580b.png)
 
 
-
-# Status
-This is a work in progress. It currently does some loading and bootstrapping and parsing. It currently writes the data out. Most of the needed components exist and work, such as Path. There's still some questions concerning the API. And the rendering from the functionality from the `svgelements` project isn't correctly implemented yet. And there's a lot of bugs, and generally many places that have nothing hooked up.
 
 # Reading
 
